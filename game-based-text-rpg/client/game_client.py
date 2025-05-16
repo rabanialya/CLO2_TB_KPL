@@ -1,3 +1,104 @@
+def fetch_data(endpoint):
+    try:
+        response = requests.get(f"{BASE_URL}/{endpoint}")
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"Error fetching {endpoint} from API: {e}")
+        exit(1)
+
+def choose_job(jobs_data):
+    print("\nPilih job karakter:")
+    for i, (job, stats) in enumerate(jobs_data.items(), start=1):
+        print(f"{i}. {job} (HP: {stats['hp']}, Attack: {stats['attack']})")
+    while True:
+        choice = input("Masukkan nomor pilihan job: ")
+        if choice.isdigit() and 1 <= int(choice) <= len(jobs_data):
+            job_name = list(jobs_data.keys())[int(choice) - 1]
+            return job_name, jobs_data[job_name]
+        print("Pilihan tidak valid, coba lagi.")
+
+def print_location_info(location, locations):
+    print("\n" + "═" * 40)  
+    print(f"=== {location.name} === 🌍")
+    print(location.description)
+    if location.side_quest:
+        print(f"Quest sampingan tersedia: {location.side_quest['description']} 🌟")
+    print("Arah yang bisa ditempuh:")
+    for direction, neighbor_key in location.neighbors.items():
+        neighbor = locations[neighbor_key]
+        print(f" - {direction.capitalize()} ke {neighbor.name}: {neighbor.description}")
+
+def print_battle_result(player, enemy):
+    print("\n" + "═" * 40)  
+    print(f"Pertarungan dimulai antara {player.name} dan {enemy.name}! 🎮")
+    print("═" * 40)
+
+def battle(player, enemy, current_location):
+    print(f"\nKamu bertemu dengan {enemy.name}! ⚔️")  
+    print_battle_result(player, enemy)
+    while player.hp > 0 and enemy.hp > 0:
+        print(f"\n{player.name} HP: {player.hp} / {player.max_hp} | {enemy.name} HP: {enemy.hp}")
+        print("1. Serang ⚔️")
+        print("2. Gunakan item 🧪")
+        choice = input("Pilih tindakan: ")
+        if choice == "1":
+            player.attack_enemy(enemy)
+        elif choice == "2":
+            player.use_item()
+        else:
+            print("Pilihan tidak valid, giliran musuh.")
+        
+        if enemy.hp > 0:
+            enemy.attack_player(player)
+
+    if player.hp > 0:
+        print(f"\n🎉 Kamu menang melawan {enemy.name}! 🎉")
+        current_location.is_cleared = True  
+        return True
+    else:
+        print(f"\n😢 {player.name} kalah melawan {enemy.name} ... Game over.")
+        return False
+
+def handle_side_quest(player, location):
+    if location.name != "Forest" or (location.side_quest and location.side_quest["name"] in player.completed_side_quests):
+        return
+    print("\n" + "═" * 40)  
+    print(f"Quest sampingan ditemukan: {location.side_quest['description']} 🌟")
+    choice = input("Apakah kamu ingin menyelesaikan quest ini? (ya/tidak): ").strip().lower()
+    if choice == "ya":
+        print("Quest sampingan dimulai... 🚀")
+        print("Kamu harus mencari herb langka di hutan.")
+        
+        enemies_data = fetch_data("enemies")  
+        fairy_stats = enemies_data.get("Fairy")  
+        
+        if fairy_stats:
+            for i in range(3):  
+                fairy = Enemy("Fairy", fairy_stats["hp"], fairy_stats["attack"])  
+                print(f"\nPertarungan {i + 1} dimulai melawan Fairy!")
+                won = battle(player, fairy, location)  
+                
+                if not won:  
+                    print("Kamu kalah dalam pertarungan. Quest gagal.")
+                    return  
+            
+            print("Kamu berhasil menemukan herb langka! 🌿")
+            print("Kamu berhasil menyelesaikan quest dan mendapat hadiah HP +20! 🎁")
+            player.max_hp += 20
+            player.hp += 20
+            if player.hp > player.max_hp:
+                player.hp = player.max_hp
+            print(f"HP maksimalmu sekarang {player.max_hp} dan HP saat ini {player.hp}")
+            player.completed_side_quests.add(location.side_quest["name"])
+            
+            location.is_cleared = True  
+            location.enemies = []  
+        else:
+            print("Data musuh tidak ditemukan.")
+    else:
+        print("Kamu melewatkan quest sampingan ini.")
+
 def main():
     print("\n=== Selamat datang di Game Petualangan Text ===")
     name = input("Masukkan nama pemain: ")
