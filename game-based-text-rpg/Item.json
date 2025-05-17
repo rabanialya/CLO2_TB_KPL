@@ -1,0 +1,6 @@
+{
+    "Potion": {"heal": 30},
+    "Elixir": {"heal": 70},
+    "Mie ayam": {"heal": 100},
+    "Es Teh" : {"heal": 80}
+}
