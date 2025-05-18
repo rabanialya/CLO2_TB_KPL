@@ -1,3 +1,46 @@
+import requests
+
+BASE_URL = "http://127.0.0.1:8000"
+
+class Player:
+    def __init__(self, name, job, hp, attack):
+        self.name = name
+        self.job = job
+        self.max_hp = hp
+        self.hp = hp
+        self.attack = attack
+        self.items = []
+        self.location = "Village"
+        self.completed_side_quests = set()
+
+    def attack_enemy(self, enemy):
+        print(f"\n{self.name} menyerang {enemy.name}! ⚔️")
+        enemy.hp -= self.attack
+        if enemy.hp < 0:
+            enemy.hp = 0
+        print(f"{enemy.name} HP tersisa: {enemy.hp}")
+
+    def use_item(self):
+        if not self.items:
+            print("Kamu tidak punya item untuk digunakan. 🥴")
+            return
+        print("\nItem yang tersedia:")
+        for i, item in enumerate(self.items, start=1):
+            print(f"{i}. {item['name']} (+{item['heal']} HP)")
+        choice = input("Pilih nomor item untuk dipakai (atau tekan Enter batal): ")
+        if not choice.isdigit():
+            print("Batal menggunakan item.")
+            return
+        choice = int(choice)
+        if 1 <= choice <= len(self.items):
+            item = self.items.pop(choice - 1)
+            self.hp += item["heal"]
+            if self.hp > self.max_hp:
+                self.hp = self.max_hp
+            print(f"Kamu menggunakan {item['name']} dan HP-mu menjadi {self.hp}.")
+        else:
+            print("Pilihan item tidak valid.")
+
 def fetch_data(endpoint):
     try:
         response = requests.get(f"{BASE_URL}/{endpoint}")
