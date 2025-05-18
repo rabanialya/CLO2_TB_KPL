@@ -16,8 +16,10 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
-//Code Reuse setya
-...
+# code reuse
+def load_json(file_name):
+    with open(os.path.join(DATA_DIR, file_name), "r") as file:
+        return json.load(file)
 
 @app.get("/")
 def read_root():
