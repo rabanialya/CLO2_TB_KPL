@@ -1,9 +1,0 @@
-{
-  "Goblin": { "hp": 50, "attack": 10 },
-  "Orc": { "hp": 70, "attack": 20 },
-  "Dragon": { "hp": 150, "attack": 30 },
-  "Serpent": {"hp":80, "attack": 20},
-  "Troll": { "hp": 70, "attack": 20 },
-  "Slime": { "hp": 30, "attack": 5 },
-  "Fairy": {"hp": 20, "attack": 5}
-}
