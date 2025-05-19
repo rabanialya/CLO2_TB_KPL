@@ -1,0 +1,5 @@
+{
+    "Warrior": {"hp": 200, "attack": 20},
+    "Mage": {"hp": 170, "attack": 30},
+    "Rogue": {"hp": 180, "attack": 25}
+}
