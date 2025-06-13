@@ -1,8 +1,16 @@
-import requests
 import cProfile
 from memory_profiler import profile
 
-BASE_URL = "http://127.0.0.1:8000"
+import time
+import os
+import requests
+
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+BASE_URL = os.getenv("BASE_URL")
 
 # === OBSERVER PATTERN === #
 class Observer:
