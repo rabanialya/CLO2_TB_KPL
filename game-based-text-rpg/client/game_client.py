@@ -4,7 +4,7 @@ from memory_profiler import profile
 
 BASE_URL = "http://127.0.0.1:8000"
 
-# === OBSERVER PATTERN ===
+# === OBSERVER PATTERN === #
 class Observer:
     def update(self, event_type, data):
         pass
@@ -29,7 +29,7 @@ class UIObserver(Observer):
         elif event_type == "enemy_defeated":
             delay_print(f"🎯 Musuh {data['enemy']} telah dikalahkan!")
 
-# === GAME CORE ===
+# === GAME CORE === #
 class Player(Subject):
     def _init_(self, name, job, hp, attack):
         super()._init_()
