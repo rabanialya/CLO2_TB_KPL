@@ -1,4 +1,6 @@
 import requests
+import cProfile
+from memory_profiler import profile
 
 BASE_URL = "http://127.0.0.1:8000"
 
@@ -40,6 +42,7 @@ class Player(Subject):
         self.location = "Village"
         self.completed_side_quests = set()
 
+    @profile
     def attack_enemy(self, enemy):
         delay_print(f"\n{self.name} menyerang {enemy.name}! ⚔")
         enemy.hp -= self.attack
@@ -72,6 +75,7 @@ class Enemy:
         self.hp = hp
         self.attack = attack
 
+    @profile
     def attack_player(self, player):
         delay_print(f"\n{self.name} menyerang {player.name}! ⚔")
         player.hp -= self.attack
@@ -120,6 +124,7 @@ def print_location_info(current_location, locations):
         neighbor = locations[neighbor_key]
         delay_print(f" - {direction.capitalize()} ke {neighbor.name}: {neighbor.description}")
 
+@profile
 def battle(player, enemy, location):
     delay_print(f"\nKamu bertemu {enemy.name}! ⚔")
     while player.hp > 0 and enemy.hp > 0:
@@ -145,6 +150,7 @@ def battle(player, enemy, location):
         delay_print(f"\n😢 {player.name} kalah melawan {enemy.name} ...")
         return False
 
+@profile
 def handle_side_quest(player, current_location, locations, enemies_data):
     if current_location.side_quest is None or current_location.name != "Forest" or current_location.side_quest['name'] in player.completed_side_quests:
         return
@@ -180,6 +186,7 @@ def delay_print(message, delay=0.001):
         time.sleep(delay)
     print()  # Untuk newline setelah pesan
 
+@profile
 def main():
     delay_print("\n=== Selamat datang di Game Petualangan Text ===")
     name = input("Masukkan nama pemain: ")
@@ -250,5 +257,11 @@ def main():
             if current_location.is_cleared:
                 delay_print("Musuh di lokasi ini telah dikalahkan. ✅")
 
-if _name_ == "_main_":
-    main()
+if __name__ == "__main__":
+    import sys
+
+    if "--profile" in sys.argv:
+        import cProfile
+        cProfile.run('main()', 'profile_result.prof')
+    else:
+        main()
