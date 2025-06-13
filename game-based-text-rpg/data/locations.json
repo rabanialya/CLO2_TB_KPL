@@ -1,0 +1,85 @@
+{
+  "Village": {
+    "description": "Desa kecil tempatmu memulai petualangan. Tidak ada musuh di sini.",
+    "enemies": [],
+    "neighbors": {
+      "timur": "Forest",
+      "barat": "Cave",
+      "selatan": "River"
+    }
+  },
+  "Forest": {
+    "description": "Hutan lebat, penuh Goblin dan Orc. Ada quest sampingan mencari herb langka.",
+    "enemies": ["Goblin", "Orc"],
+    "neighbors": {
+      "barat": "Village",
+      "timur": "Hill"
+    },
+    "side_quest": {
+      "name": "Herb Hunt",
+      "description": "Cari herb langka di hutan."
+    }
+  },
+  "Cave": {
+    "description": "Gua gelap penuh Troll dan Orc. Waspadalah!",
+    "enemies": ["Orc", "Troll"],
+    "neighbors": {
+      "timur": "Village",
+      "selatan": "Swamp"
+    }
+  },
+  "River": {
+    "description": "Sungai mengalir deras, musuh Goblin menghuni sekitar sini.",
+    "enemies": ["Goblin"],
+    "neighbors": {
+      "utara": "Village",
+      "timur": "Swamp",
+      "barat": "Hill"
+    },
+    "side_quest": {
+      "name": "Clean Water Mission",
+      "description": "Bersihkan sungai dari polusi dan gangguan monster."
+    }
+  },
+  "Swamp": {
+    "description": "Rawa berlumpur, penuh dengan makhluk buruk seperti Slime dan Troll.",
+    "enemies": ["Slime", "Troll"],
+    "neighbors": {
+      "barat": "River",
+      "utara": "Cave",
+      "timur": "Mountain"
+    },
+    "side_quest": {
+      "name": "Rawa Survival",
+      "description": "Temukan artefak kuno yang tersembunyi di rawa."
+    }
+  },
+  "Mountain": {
+    "description": "Gunung tinggi dengan musuh kuat, termasuk seekor Serpent.",
+    "enemies": ["Serpent"],
+    "neighbors": {
+      "barat": "Swamp",
+      "timur": "Dragon Lair"
+    },
+    "side_quest": {
+      "name": "Batu Suci",
+      "description": "Ambil batu suci dari puncak gunung untuk membuka kekuatan baru."
+    }
+  },
+  "Hill": {
+    "description": "Bukit yang tenang, musuh lemah dan banyak rumput.",
+    "enemies": ["Goblin"],
+    "neighbors": {
+      "barat": "Forest",
+      "timur": "River"
+    }
+  },
+  "Dragon Lair": {
+    "description": "Tempat tinggal sang naga besar menunggu tantangan terakhirmu!",
+    "enemies": ["Dragon"],
+    "neighbors": {
+      "barat": "Mountain"
+    },
+    "is_final": true
+  }
+}

@@ -2,8 +2,35 @@ import requests
 
 BASE_URL = "http://127.0.0.1:8000"
 
-class Player:
-    def __init__(self, name, job, hp, attack):
+# === OBSERVER PATTERN ===
+class Observer:
+    def update(self, event_type, data):
+        pass
+
+class Subject:
+    def _init_(self):
+        self._observers = []
+
+    def add_observer(self, observer: Observer):
+        self._observers.append(observer)
+
+    def notify(self, event_type, data=None):
+        for observer in self._observers:
+            observer.update(event_type, data)
+
+class UIObserver(Observer):
+    def update(self, event_type, data):
+        if event_type == "hp_changed":
+            delay_print(f"⚠  HP {data['player']} sekarang {data['hp']}/{data['max_hp']}")
+        elif event_type == "item_used":
+            delay_print(f"🧪 {data['player']} menggunakan {data['item']}, HP menjadi {data['hp']}")
+        elif event_type == "enemy_defeated":
+            delay_print(f"🎯 Musuh {data['enemy']} telah dikalahkan!")
+
+# === GAME CORE ===
+class Player(Subject):
+    def _init_(self, name, job, hp, attack):
+        super()._init_()
         self.name = name
         self.job = job
         self.max_hp = hp
@@ -14,32 +41,53 @@ class Player:
         self.completed_side_quests = set()
 
     def attack_enemy(self, enemy):
-        print(f"\n{self.name} menyerang {enemy.name}! ⚔️")
+        delay_print(f"\n{self.name} menyerang {enemy.name}! ⚔")
         enemy.hp -= self.attack
-        if enemy.hp < 0:
-            enemy.hp = 0
-        print(f"{enemy.name} HP tersisa: {enemy.hp}")
+        enemy.hp = max(0, enemy.hp)
+        delay_print(f"{enemy.name} HP tersisa: {enemy.hp}")
 
     def use_item(self):
         if not self.items:
-            print("Kamu tidak punya item untuk digunakan. 🥴")
+            delay_print("Kamu tidak punya item untuk digunakan. 🥴")
             return
-        print("\nItem yang tersedia:")
+        delay_print("\nItem yang tersedia:")
         for i, item in enumerate(self.items, start=1):
-            print(f"{i}. {item['name']} (+{item['heal']} HP)")
+            delay_print(f"{i}. {item['name']} (+{item['heal']} HP)")
         choice = input("Pilih nomor item untuk dipakai (atau tekan Enter batal): ")
         if not choice.isdigit():
-            print("Batal menggunakan item.")
+            delay_print("Batal menggunakan item.")
             return
-        choice = int(choice)
-        if 1 <= choice <= len(self.items):
-            item = self.items.pop(choice - 1)
-            self.hp += item["heal"]
-            if self.hp > self.max_hp:
-                self.hp = self.max_hp
-            print(f"Kamu menggunakan {item['name']} dan HP-mu menjadi {self.hp}.")
+        index = int(choice)
+        if 1 <= index <= len(self.items):
+            item = self.items.pop(index - 1)
+            self.hp = min(self.max_hp, self.hp + item['heal'])
+            self.notify("item_used", {"player": self.name, "item": item['name'], "hp": self.hp})
+            delay_print(f"Kamu menggunakan {item['name']}, HP sekarang: {self.hp}")
         else:
-            print("Pilihan item tidak valid.")
+            delay_print("Pilihan item tidak valid.")
+
+class Enemy:
+    def _init_(self, name, hp, attack):
+        self.name = name
+        self.hp = hp
+        self.attack = attack
+
+    def attack_player(self, player):
+        delay_print(f"\n{self.name} menyerang {player.name}! ⚔")
+        player.hp -= self.attack
+        player.hp = max(0, player.hp)
+        player.notify("hp_changed", {"player": player.name, "hp": player.hp, "max_hp": player.max_hp})
+        delay_print(f"{player.name} HP tersisa: {player.hp}")
+
+class Location:
+    def _init_(self, name, description, enemies=None, neighbors=None, is_final=False, side_quest=None):
+        self.name = name
+        self.description = description
+        self.enemies = enemies if enemies else []
+        self.neighbors = neighbors if neighbors else {}
+        self.is_final = is_final
+        self.side_quest = side_quest
+        self.is_cleared = False
 
 def fetch_data(endpoint):
     try:
@@ -47,160 +95,160 @@ def fetch_data(endpoint):
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
-        print(f"Error fetching {endpoint} from API: {e}")
+        delay_print(f"Gagal mengambil data dari API: {e}")
         exit(1)
 
 def choose_job(jobs_data):
-    print("\nPilih job karakter:")
+    delay_print("\nPilih job karakter:")
     for i, (job, stats) in enumerate(jobs_data.items(), start=1):
-        print(f"{i}. {job} (HP: {stats['hp']}, Attack: {stats['attack']})")
+        delay_print(f"{i}. {job} (HP: {stats['hp']}, Attack: {stats['attack']})")
     while True:
         choice = input("Masukkan nomor pilihan job: ")
         if choice.isdigit() and 1 <= int(choice) <= len(jobs_data):
             job_name = list(jobs_data.keys())[int(choice) - 1]
             return job_name, jobs_data[job_name]
-        print("Pilihan tidak valid, coba lagi.")
+        delay_print("Pilihan tidak valid, coba lagi.")
 
-def print_location_info(location, locations):
-    print("\n" + "═" * 40)  
-    print(f"=== {location.name} === 🌍")
-    print(location.description)
-    if location.side_quest:
-        print(f"Quest sampingan tersedia: {location.side_quest['description']} 🌟")
-    print("Arah yang bisa ditempuh:")
-    for direction, neighbor_key in location.neighbors.items():
+def print_location_info(current_location, locations):
+    delay_print("\n" + "═" * 40)
+    delay_print(f"==== {current_location.name} ==== ")
+    delay_print(current_location.description)
+    if current_location.side_quest:
+        delay_print(f"Quest sampingan: {current_location.side_quest['description']} 🌟")
+    delay_print("Arah yang bisa ditempuh:")
+    for direction, neighbor_key in current_location.neighbors.items():
         neighbor = locations[neighbor_key]
-        print(f" - {direction.capitalize()} ke {neighbor.name}: {neighbor.description}")
+        delay_print(f" - {direction.capitalize()} ke {neighbor.name}: {neighbor.description}")
 
-def print_battle_result(player, enemy):
-    print("\n" + "═" * 40)  
-    print(f"Pertarungan dimulai antara {player.name} dan {enemy.name}! 🎮")
-    print("═" * 40)
-
-def battle(player, enemy, current_location):
-    print(f"\nKamu bertemu dengan {enemy.name}! ⚔️")  
-    print_battle_result(player, enemy)
+def battle(player, enemy, location):
+    delay_print(f"\nKamu bertemu {enemy.name}! ⚔")
     while player.hp > 0 and enemy.hp > 0:
-        print(f"\n{player.name} HP: {player.hp} / {player.max_hp} | {enemy.name} HP: {enemy.hp}")
-        print("1. Serang ⚔️")
-        print("2. Gunakan item 🧪")
-        choice = input("Pilih tindakan: ")
-        if choice == "1":
+        delay_print(f"\n{player.name} HP: {player.hp} / {player.max_hp} | {enemy.name} HP: {enemy.hp}")
+        print("1. Serang ⚔\n2. Gunakan item 🧪")
+        action = input("Pilih tindakan: ")
+        if action == "1":
             player.attack_enemy(enemy)
-        elif choice == "2":
+        elif action == "2":
             player.use_item()
         else:
-            print("Pilihan tidak valid, giliran musuh.")
-        
+            print("Pilihan tidak valid.")
+
         if enemy.hp > 0:
             enemy.attack_player(player)
 
     if player.hp > 0:
-        print(f"\n🎉 Kamu menang melawan {enemy.name}! 🎉")
-        current_location.is_cleared = True  
+        delay_print(f"\n🎉 Kamu menang melawan {enemy.name}!")
+        player.notify("enemy_defeated", {"enemy": enemy.name})
+        location.is_cleared = True
         return True
     else:
-        print(f"\n😢 {player.name} kalah melawan {enemy.name} ... Game over.")
+        delay_print(f"\n😢 {player.name} kalah melawan {enemy.name} ...")
         return False
 
-def handle_side_quest(player, location):
-    if location.name != "Forest" or (location.side_quest and location.side_quest["name"] in player.completed_side_quests):
+def handle_side_quest(player, current_location, locations, enemies_data):
+    if current_location.side_quest is None or current_location.name != "Forest" or current_location.side_quest['name'] in player.completed_side_quests:
         return
-    print("\n" + "═" * 40)  
-    print(f"Quest sampingan ditemukan: {location.side_quest['description']} 🌟")
-    choice = input("Apakah kamu ingin menyelesaikan quest ini? (ya/tidak): ").strip().lower()
-    if choice == "ya":
-        print("Quest sampingan dimulai... 🚀")
-        print("Kamu harus mencari herb langka di hutan.")
-        
-        enemies_data = fetch_data("enemies")  
-        fairy_stats = enemies_data.get("Fairy")  
-        
-        if fairy_stats:
-            for i in range(3):  
-                fairy = Enemy("Fairy", fairy_stats["hp"], fairy_stats["attack"])  
-                print(f"\nPertarungan {i + 1} dimulai melawan Fairy!")
-                won = battle(player, fairy, location)  
-                
-                if not won:  
-                    print("Kamu kalah dalam pertarungan. Quest gagal.")
-                    return  
-            
-            print("Kamu berhasil menemukan herb langka! 🌿")
-            print("Kamu berhasil menyelesaikan quest dan mendapat hadiah HP +20! 🎁")
-            player.max_hp += 20
-            player.hp += 20
-            if player.hp > player.max_hp:
-                player.hp = player.max_hp
-            print(f"HP maksimalmu sekarang {player.max_hp} dan HP saat ini {player.hp}")
-            player.completed_side_quests.add(location.side_quest["name"])
-            
-            location.is_cleared = True  
-            location.enemies = []  
-        else:
-            print("Data musuh tidak ditemukan.")
-    else:
-        print("Kamu melewatkan quest sampingan ini.")
+    delay_print(f"\nQuest sampingan ditemukan: {current_location.side_quest['description']} 🌟")
+    choice = input("Ingin selesaikan quest ini? (ya/tidak): ").strip().lower()
+    if choice != "ya":
+        delay_print("Quest dilewati.")
+        return
+    delay_print("Quest dimulai... Cari herb langka.")
+    fairy_stats = enemies_data.get("Fairy")
+    if not fairy_stats:
+        delay_print("Data musuh Fairy tidak tersedia.")
+        return
+    for i in range(3):
+        fairy = Enemy("Fairy", fairy_stats["hp"], fairy_stats["attack"])
+        delay_print(f"\nPertarungan {i+1} melawan Fairy!")
+        if not battle(player, fairy, current_location):
+            delay_print("Kamu kalah, quest gagal.")
+            return
+    delay_print("🎉 Kamu menang melawan Fairy!")
+    delay_print("Kamu menemukan herb langka dan mendapat HP +20!")
+    player.max_hp += 20
+    player.hp = min(player.max_hp, player.hp + 20)
+    player.completed_side_quests.add(current_location.side_quest['name'])
+    current_location.is_cleared = True
+    current_location.enemies = []
+    print_location_info(current_location, locations)
+
+def delay_print(message, delay=0.001):
+    """Menampilkan pesan dengan delay."""
+    for char in message:
+        print(char, end='', flush=True)
+        time.sleep(delay)
+    print()  # Untuk newline setelah pesan
 
 def main():
-    print("\n=== Selamat datang di Game Petualangan Text ===")
+    delay_print("\n=== Selamat datang di Game Petualangan Text ===")
     name = input("Masukkan nama pemain: ")
     jobs_data = fetch_data("jobs")
     job_name, job_stats = choose_job(jobs_data)
+
     player = Player(name, job_name, job_stats["hp"], job_stats["attack"])
-    items_data = fetch_data("items")
-    for item_name, item_stats in items_data.items():
+    player.add_observer(UIObserver())
+
+    for item_name, item_stats in fetch_data("items").items():
         player.items.append({"name": item_name, **item_stats})
+
     enemies_data = fetch_data("enemies")
+    locations_json = fetch_data("locations")
 
+    locations = {}
+    for key, value in locations_json.items():
+        locations[key] = Location(
+            key,
+            value["description"],
+            value.get("enemies", []),
+            value.get("neighbors", {}),
+            value.get("is_final", False),
+            value.get("side_quest")
+        )
 
-visited = set()
-    print(f"\nHalo, {player.name} si {player.job}! Petualangan dimulai dari Desa.")
-    # Automata
+    visited = set()
+    delay_print(f"\nHalo, {player.name} si {player.job}! Petualangan dimulai dari Desa.")
+
     state = "exploring"
     while True:
         current_location = locations[player.location]
         if state == "exploring":
             print_location_info(current_location, locations)
-            handle_side_quest(player, current_location)
+            handle_side_quest(player, current_location, locations, enemies_data)  # Panggil fungsi quest di sini
             if player.location not in visited and current_location.enemies:
                 state = "battling"
             else:
-                print("\nArah mana yang ingin kamu tuju?")
-                for direction, neighbor_key in current_location.neighbors.items():
-                    neighbor = locations[neighbor_key]
-                    print(f" - {direction.capitalize()} ke {neighbor.name}")
-                direction = input("Masukkan arah (atau ketik 'exit' untuk keluar): ").strip().lower()
+                direction = input("Pilih arah untuk bergerak (atau 'exit' untuk keluar): ").strip().lower()
                 if direction == "exit":
-                    print("Terima kasih sudah bermain! 👋")
+                    delay_print("Terima kasih sudah bermain! 👋")
                     break
                 if direction in current_location.neighbors:
                     player.location = current_location.neighbors[direction]
                 else:
-                    print("Arah tidak valid. Silakan pilih lagi.")
+                    delay_print("Arah tidak valid. Pilih arah yang tersedia.")
+
         elif state == "battling":
             for enemy_name in current_location.enemies:
                 enemy_stats = enemies_data.get(enemy_name)
-                if not enemy_stats:
-                    print(f"Musuh {enemy_name} tidak ditemukan di data API.")
+                if enemy_stats is None:
+                    delay_print(f"Data untuk musuh {enemy_name} tidak ditemukan.")
                     continue
                 enemy = Enemy(enemy_name, enemy_stats["hp"], enemy_stats["attack"])
-                won = battle(player, enemy, current_location)
-                if not won:
+                if not battle(player, enemy, current_location):
                     while True:
-                        choice = input("\nKamu kalah. Ingin coba lagi dari awal atau keluar? (ulang/keluar): ").strip().lower()
-                        if choice == "ulang":
-                            main()  
+                        retry = input("\nKamu kalah. Ulang dari awal atau keluar? (ulang/keluar): ").strip().lower()
+                        if retry == "ulang":
+                            main()
                             return
-                        elif choice == "keluar":
-                            print("Game selesai. Terima kasih sudah bermain! 👋")
+                        elif retry == "keluar":
+                            delay_print("Game selesai. Sampai jumpa!")
                             exit()
                         else:
-                            print("Pilihan tidak valid. Ketik 'ulang' atau 'keluar'.")
-            visited.add(player.location)  
-            state = "exploring"  
+                            delay_print("Pilihan tidak valid.")
+            visited.add(player.location)
+            state = "exploring"
             if current_location.is_cleared:
-                print("Disini musuh sudah dikalahkan. ✅")
+                delay_print("Musuh di lokasi ini telah dikalahkan. ✅")
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()
