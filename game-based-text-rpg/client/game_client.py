@@ -2,6 +2,31 @@ import requests
 
 BASE_URL = "http://127.0.0.1:8000"
 
+# === OBSERVER PATTERN ===
+class Observer:
+    def update(self, event_type, data):
+        pass
+
+class Subject:
+    def _init_(self):
+        self._observers = []
+
+    def add_observer(self, observer: Observer):
+        self._observers.append(observer)
+
+    def notify(self, event_type, data=None):
+        for observer in self._observers:
+            observer.update(event_type, data)
+
+class UIObserver(Observer):
+    def update(self, event_type, data):
+        if event_type == "hp_changed":
+            delay_print(f"⚠  HP {data['player']} sekarang {data['hp']}/{data['max_hp']}")
+        elif event_type == "item_used":
+            delay_print(f"🧪 {data['player']} menggunakan {data['item']}, HP menjadi {data['hp']}")
+        elif event_type == "enemy_defeated":
+            delay_print(f"🎯 Musuh {data['enemy']} telah dikalahkan!")
+
 # === GAME CORE ===
 class Player(Subject):
     def _init_(self, name, job, hp, attack):
